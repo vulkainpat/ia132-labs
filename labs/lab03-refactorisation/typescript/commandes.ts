@@ -28,6 +28,27 @@ const PRIORITE_HAUTE = 'haute';
 const PRIORITE_NORMALE = 'normale';
 const PRIORITE_BASSE = 'basse';
 
+/** Tarif de livraison d'une région : forfaits léger et moyen (le forfait moyen sert aussi de base au-delà), puis coût par kg au-delà du palier moyen. */
+type TarifRegion = { forfaitLeger: number; forfaitMoyen: number; parKgSupplementaire: number };
+
+const TARIFS_PAR_REGION = new Map<string, TarifRegion>([
+  [REGION_QUEBEC, { forfaitLeger: 8, forfaitMoyen: 15, parKgSupplementaire: 1.5 }],
+  [REGION_ONTARIO, { forfaitLeger: 10, forfaitMoyen: 18, parKgSupplementaire: 1.75 }],
+]);
+const TARIF_AUTRES_REGIONS: TarifRegion = { forfaitLeger: 14, forfaitMoyen: 25, parKgSupplementaire: 2.5 };
+
+/** Frais de livraison (avant remise premium) selon la région et le poids en kg. */
+function fraisLivraison(poids: number, region: string): number {
+  const tarif = TARIFS_PAR_REGION.get(region) ?? TARIF_AUTRES_REGIONS;
+  if (poids <= POIDS_LEGER_MAX) {
+    return tarif.forfaitLeger;
+  }
+  if (poids <= POIDS_MOYEN_MAX) {
+    return tarif.forfaitMoyen;
+  }
+  return tarif.forfaitMoyen + (poids - POIDS_MOYEN_MAX) * tarif.parKgSupplementaire;
+}
+
 /**
  * Calcule total, livraison et priorité des commandes non annulées au poids valide.
  * @param commandes commandes à traiter
@@ -48,32 +69,7 @@ export function traiter(commandes: Commande[], region: string, clientPremium: bo
     for (const ligne of commande.lignes) {
       sousTotal += ligne.prix * ligne.qte;
     }
-    let livraison: number;
-    if (region === REGION_QUEBEC) {
-      if (commande.poids <= POIDS_LEGER_MAX) {
-        livraison = 8;
-      } else if (commande.poids <= POIDS_MOYEN_MAX) {
-        livraison = 15;
-      } else {
-        livraison = 15 + (commande.poids - POIDS_MOYEN_MAX) * 1.5;
-      }
-    } else if (region === REGION_ONTARIO) {
-      if (commande.poids <= POIDS_LEGER_MAX) {
-        livraison = 10;
-      } else if (commande.poids <= POIDS_MOYEN_MAX) {
-        livraison = 18;
-      } else {
-        livraison = 18 + (commande.poids - POIDS_MOYEN_MAX) * 1.75;
-      }
-    } else {
-      if (commande.poids <= POIDS_LEGER_MAX) {
-        livraison = 14;
-      } else if (commande.poids <= POIDS_MOYEN_MAX) {
-        livraison = 25;
-      } else {
-        livraison = 25 + (commande.poids - POIDS_MOYEN_MAX) * 2.5;
-      }
-    }
+    let livraison = fraisLivraison(commande.poids, region);
     if (clientPremium) {
       if (sousTotal > SEUIL_LIVRAISON_OFFERTE_PREMIUM) {
         livraison = 0;
