@@ -49,6 +49,36 @@ function fraisLivraison(poids: number, region: string): number {
   return tarif.forfaitMoyen + (poids - POIDS_MOYEN_MAX) * tarif.parKgSupplementaire;
 }
 
+/** Somme des prix × quantités des lignes. */
+function calculerSousTotal(lignes: Ligne[]): number {
+  let sousTotal = 0;
+  for (const ligne of lignes) {
+    sousTotal += ligne.prix * ligne.qte;
+  }
+  return sousTotal;
+}
+
+/** Client premium : livraison offerte au-delà du seuil, sinon moitié prix. */
+function appliquerRemisePremium(livraison: number, sousTotal: number): number {
+  return sousTotal > SEUIL_LIVRAISON_OFFERTE_PREMIUM ? 0 : livraison / 2;
+}
+
+/** Priorité de la commande selon son sous-total. */
+function priorite(sousTotal: number): string {
+  if (sousTotal > SEUIL_PRIORITE_HAUTE) {
+    return PRIORITE_HAUTE;
+  }
+  if (sousTotal > SEUIL_PRIORITE_NORMALE) {
+    return PRIORITE_NORMALE;
+  }
+  return PRIORITE_BASSE;
+}
+
+/** Arrondi à deux décimales. */
+function arrondir2(montant: number): number {
+  return Math.round(montant * 100) / 100;
+}
+
 /**
  * Calcule total, livraison et priorité des commandes non annulées au poids valide.
  * @param commandes commandes à traiter
@@ -65,31 +95,16 @@ export function traiter(commandes: Commande[], region: string, clientPremium: bo
       console.log('poids invalide ' + commande.id);
       continue;
     }
-    let sousTotal = 0;
-    for (const ligne of commande.lignes) {
-      sousTotal += ligne.prix * ligne.qte;
-    }
+    const sousTotal = calculerSousTotal(commande.lignes);
     let livraison = fraisLivraison(commande.poids, region);
     if (clientPremium) {
-      if (sousTotal > SEUIL_LIVRAISON_OFFERTE_PREMIUM) {
-        livraison = 0;
-      } else {
-        livraison = livraison / 2;
-      }
-    }
-    let priorite: string;
-    if (sousTotal > SEUIL_PRIORITE_HAUTE) {
-      priorite = PRIORITE_HAUTE;
-    } else if (sousTotal > SEUIL_PRIORITE_NORMALE) {
-      priorite = PRIORITE_NORMALE;
-    } else {
-      priorite = PRIORITE_BASSE;
+      livraison = appliquerRemisePremium(livraison, sousTotal);
     }
     resultats.push({
       id: commande.id,
-      total: Math.round((sousTotal + livraison) * 100) / 100,
-      livraison: Math.round(livraison * 100) / 100,
-      priorite: priorite,
+      total: arrondir2(sousTotal + livraison),
+      livraison: arrondir2(livraison),
+      priorite: priorite(sousTotal),
     });
   }
   return resultats;
