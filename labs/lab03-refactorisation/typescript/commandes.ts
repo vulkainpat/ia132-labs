@@ -10,6 +10,24 @@ export type Commande = { id: string; statut: string; poids: number; lignes: Lign
 /** Résultat du traitement d'une commande. */
 export type CommandeTraitee = { id: string; total: number; livraison: number; priorite: string };
 
+const STATUT_ANNULEE = 'annulee';
+const REGION_QUEBEC = 'QC';
+const REGION_ONTARIO = 'ON';
+
+/** Paliers de poids (kg) : jusqu'à LEGER inclus, jusqu'à MOYEN inclus, puis surcharge au-delà de MOYEN. */
+const POIDS_LEGER_MAX = 2;
+const POIDS_MOYEN_MAX = 10;
+
+/** Client premium : livraison offerte si le sous-total dépasse ce seuil, sinon moitié prix. */
+const SEUIL_LIVRAISON_OFFERTE_PREMIUM = 100;
+
+/** Priorité : « haute » au-delà du premier seuil, « normale » au-delà du second, sinon « basse ». */
+const SEUIL_PRIORITE_HAUTE = 500;
+const SEUIL_PRIORITE_NORMALE = 100;
+const PRIORITE_HAUTE = 'haute';
+const PRIORITE_NORMALE = 'normale';
+const PRIORITE_BASSE = 'basse';
+
 /**
  * Calcule total, livraison et priorité des commandes non annulées au poids valide.
  * @param commandes commandes à traiter
@@ -19,7 +37,7 @@ export type CommandeTraitee = { id: string; total: number; livraison: number; pr
 export function traiter(commandes: Commande[], region: string, clientPremium: boolean): CommandeTraitee[] {
   const resultats: CommandeTraitee[] = [];
   for (const commande of commandes) {
-    if (commande.statut === 'annulee') {
+    if (commande.statut === STATUT_ANNULEE) {
       continue;
     }
     if (!(commande.poids > 0)) {
@@ -31,45 +49,45 @@ export function traiter(commandes: Commande[], region: string, clientPremium: bo
       sousTotal += ligne.prix * ligne.qte;
     }
     let livraison: number;
-    if (region === 'QC') {
-      if (commande.poids <= 2) {
+    if (region === REGION_QUEBEC) {
+      if (commande.poids <= POIDS_LEGER_MAX) {
         livraison = 8;
-      } else if (commande.poids <= 10) {
+      } else if (commande.poids <= POIDS_MOYEN_MAX) {
         livraison = 15;
       } else {
-        livraison = 15 + (commande.poids - 10) * 1.5;
+        livraison = 15 + (commande.poids - POIDS_MOYEN_MAX) * 1.5;
       }
-    } else if (region === 'ON') {
-      if (commande.poids <= 2) {
+    } else if (region === REGION_ONTARIO) {
+      if (commande.poids <= POIDS_LEGER_MAX) {
         livraison = 10;
-      } else if (commande.poids <= 10) {
+      } else if (commande.poids <= POIDS_MOYEN_MAX) {
         livraison = 18;
       } else {
-        livraison = 18 + (commande.poids - 10) * 1.75;
+        livraison = 18 + (commande.poids - POIDS_MOYEN_MAX) * 1.75;
       }
     } else {
-      if (commande.poids <= 2) {
+      if (commande.poids <= POIDS_LEGER_MAX) {
         livraison = 14;
-      } else if (commande.poids <= 10) {
+      } else if (commande.poids <= POIDS_MOYEN_MAX) {
         livraison = 25;
       } else {
-        livraison = 25 + (commande.poids - 10) * 2.5;
+        livraison = 25 + (commande.poids - POIDS_MOYEN_MAX) * 2.5;
       }
     }
     if (clientPremium) {
-      if (sousTotal > 100) {
+      if (sousTotal > SEUIL_LIVRAISON_OFFERTE_PREMIUM) {
         livraison = 0;
       } else {
         livraison = livraison / 2;
       }
     }
     let priorite: string;
-    if (sousTotal > 500) {
-      priorite = 'haute';
-    } else if (sousTotal > 100) {
-      priorite = 'normale';
+    if (sousTotal > SEUIL_PRIORITE_HAUTE) {
+      priorite = PRIORITE_HAUTE;
+    } else if (sousTotal > SEUIL_PRIORITE_NORMALE) {
+      priorite = PRIORITE_NORMALE;
     } else {
-      priorite = 'basse';
+      priorite = PRIORITE_BASSE;
     }
     resultats.push({
       id: commande.id,
