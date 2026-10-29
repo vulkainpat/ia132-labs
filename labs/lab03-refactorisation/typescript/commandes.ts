@@ -1,69 +1,88 @@
 // Module hérité : calcule le total, la livraison et la priorité des commandes.
 // Écrit en 2017, « ça marche, on n'y touche pas ». Jusqu'à aujourd'hui.
 
-export function traiter(c: any[], r: string, p: boolean): any[] {
-  // c = commandes, r = region, p = client premium
-  const res: any[] = [];
-  for (let i = 0; i < c.length; i++) {
-    const x = c[i];
-    if (x.statut != 'annulee') {
-      if (x.poids > 0) {
-        let t = 0;
-        for (let j = 0; j < x.lignes.length; j++) {
-          t = t + x.lignes[j].prix * x.lignes[j].qte;
+/** Ligne d'une commande : prix unitaire et quantité. */
+export type Ligne = { prix: number; qte: number };
+
+/** Commande à traiter. */
+export type Commande = { id: string; statut: string; poids: number; lignes: Ligne[] };
+
+/** Résultat du traitement d'une commande. */
+export type CommandeTraitee = { id: string; total: number; livraison: number; priorite: string };
+
+/**
+ * Calcule total, livraison et priorité des commandes non annulées au poids valide.
+ * @param commandes commandes à traiter
+ * @param region code de région de livraison ('QC', 'ON', sinon tarif par défaut)
+ * @param clientPremium true si le client est premium
+ */
+export function traiter(commandes: Commande[], region: string, clientPremium: boolean): CommandeTraitee[] {
+  const resultats: CommandeTraitee[] = [];
+  for (let i = 0; i < commandes.length; i++) {
+    const commande = commandes[i];
+    if (commande.statut != 'annulee') {
+      if (commande.poids > 0) {
+        let sousTotal = 0;
+        for (let j = 0; j < commande.lignes.length; j++) {
+          sousTotal = sousTotal + commande.lignes[j].prix * commande.lignes[j].qte;
         }
-        let f;
-        if (r == 'QC') {
-          if (x.poids <= 2) {
-            f = 8;
+        let livraison: number;
+        if (region == 'QC') {
+          if (commande.poids <= 2) {
+            livraison = 8;
           } else {
-            if (x.poids <= 10) {
-              f = 15;
+            if (commande.poids <= 10) {
+              livraison = 15;
             } else {
-              f = 15 + (x.poids - 10) * 1.5;
+              livraison = 15 + (commande.poids - 10) * 1.5;
             }
           }
-        } else if (r == 'ON') {
-          if (x.poids <= 2) {
-            f = 10;
+        } else if (region == 'ON') {
+          if (commande.poids <= 2) {
+            livraison = 10;
           } else {
-            if (x.poids <= 10) {
-              f = 18;
+            if (commande.poids <= 10) {
+              livraison = 18;
             } else {
-              f = 18 + (x.poids - 10) * 1.75;
+              livraison = 18 + (commande.poids - 10) * 1.75;
             }
           }
         } else {
-          if (x.poids <= 2) {
-            f = 14;
+          if (commande.poids <= 2) {
+            livraison = 14;
           } else {
-            if (x.poids <= 10) {
-              f = 25;
+            if (commande.poids <= 10) {
+              livraison = 25;
             } else {
-              f = 25 + (x.poids - 10) * 2.5;
+              livraison = 25 + (commande.poids - 10) * 2.5;
             }
           }
         }
-        if (p) {
-          if (t > 100) {
-            f = 0;
+        if (clientPremium) {
+          if (sousTotal > 100) {
+            livraison = 0;
           } else {
-            f = f / 2;
+            livraison = livraison / 2;
           }
         }
-        let pr;
-        if (t > 500) {
-          pr = 'haute';
-        } else if (t > 100) {
-          pr = 'normale';
+        let priorite: string;
+        if (sousTotal > 500) {
+          priorite = 'haute';
+        } else if (sousTotal > 100) {
+          priorite = 'normale';
         } else {
-          pr = 'basse';
+          priorite = 'basse';
         }
-        res.push({ id: x.id, total: Math.round((t + f) * 100) / 100, livraison: Math.round(f * 100) / 100, priorite: pr });
+        resultats.push({
+          id: commande.id,
+          total: Math.round((sousTotal + livraison) * 100) / 100,
+          livraison: Math.round(livraison * 100) / 100,
+          priorite: priorite,
+        });
       } else {
-        console.log('poids invalide ' + x.id);
+        console.log('poids invalide ' + commande.id);
       }
     }
   }
-  return res;
+  return resultats;
 }
