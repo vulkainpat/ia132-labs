@@ -18,71 +18,65 @@ export type CommandeTraitee = { id: string; total: number; livraison: number; pr
  */
 export function traiter(commandes: Commande[], region: string, clientPremium: boolean): CommandeTraitee[] {
   const resultats: CommandeTraitee[] = [];
-  for (let i = 0; i < commandes.length; i++) {
-    const commande = commandes[i];
-    if (commande.statut != 'annulee') {
-      if (commande.poids > 0) {
-        let sousTotal = 0;
-        for (let j = 0; j < commande.lignes.length; j++) {
-          sousTotal = sousTotal + commande.lignes[j].prix * commande.lignes[j].qte;
-        }
-        let livraison: number;
-        if (region == 'QC') {
-          if (commande.poids <= 2) {
-            livraison = 8;
-          } else {
-            if (commande.poids <= 10) {
-              livraison = 15;
-            } else {
-              livraison = 15 + (commande.poids - 10) * 1.5;
-            }
-          }
-        } else if (region == 'ON') {
-          if (commande.poids <= 2) {
-            livraison = 10;
-          } else {
-            if (commande.poids <= 10) {
-              livraison = 18;
-            } else {
-              livraison = 18 + (commande.poids - 10) * 1.75;
-            }
-          }
-        } else {
-          if (commande.poids <= 2) {
-            livraison = 14;
-          } else {
-            if (commande.poids <= 10) {
-              livraison = 25;
-            } else {
-              livraison = 25 + (commande.poids - 10) * 2.5;
-            }
-          }
-        }
-        if (clientPremium) {
-          if (sousTotal > 100) {
-            livraison = 0;
-          } else {
-            livraison = livraison / 2;
-          }
-        }
-        let priorite: string;
-        if (sousTotal > 500) {
-          priorite = 'haute';
-        } else if (sousTotal > 100) {
-          priorite = 'normale';
-        } else {
-          priorite = 'basse';
-        }
-        resultats.push({
-          id: commande.id,
-          total: Math.round((sousTotal + livraison) * 100) / 100,
-          livraison: Math.round(livraison * 100) / 100,
-          priorite: priorite,
-        });
+  for (const commande of commandes) {
+    if (commande.statut === 'annulee') {
+      continue;
+    }
+    if (!(commande.poids > 0)) {
+      console.log('poids invalide ' + commande.id);
+      continue;
+    }
+    let sousTotal = 0;
+    for (const ligne of commande.lignes) {
+      sousTotal += ligne.prix * ligne.qte;
+    }
+    let livraison: number;
+    if (region === 'QC') {
+      if (commande.poids <= 2) {
+        livraison = 8;
+      } else if (commande.poids <= 10) {
+        livraison = 15;
       } else {
-        console.log('poids invalide ' + commande.id);
+        livraison = 15 + (commande.poids - 10) * 1.5;
+      }
+    } else if (region === 'ON') {
+      if (commande.poids <= 2) {
+        livraison = 10;
+      } else if (commande.poids <= 10) {
+        livraison = 18;
+      } else {
+        livraison = 18 + (commande.poids - 10) * 1.75;
+      }
+    } else {
+      if (commande.poids <= 2) {
+        livraison = 14;
+      } else if (commande.poids <= 10) {
+        livraison = 25;
+      } else {
+        livraison = 25 + (commande.poids - 10) * 2.5;
       }
     }
+    if (clientPremium) {
+      if (sousTotal > 100) {
+        livraison = 0;
+      } else {
+        livraison = livraison / 2;
+      }
+    }
+    let priorite: string;
+    if (sousTotal > 500) {
+      priorite = 'haute';
+    } else if (sousTotal > 100) {
+      priorite = 'normale';
+    } else {
+      priorite = 'basse';
+    }
+    resultats.push({
+      id: commande.id,
+      total: Math.round((sousTotal + livraison) * 100) / 100,
+      livraison: Math.round(livraison * 100) / 100,
+      priorite: priorite,
+    });
   }
   return resultats;
 }
