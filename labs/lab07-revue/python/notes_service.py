@@ -69,7 +69,9 @@ class NotesService:
         return cur.lastrowid
 
     def lire_note(self, user_id, note_id):
-        row = self.bd.execute("select contenu from notes where id = ?", (note_id,)).fetchone()
+        row = self.bd.execute(
+            "select contenu from notes where id = ? and owner = ?", (note_id, user_id)
+        ).fetchone()
         return row[0] if row else None
 
     def jeton(self, user_id):
