@@ -1,9 +1,7 @@
 // Service de notes personnelles — pull request n° 42, « prêt pour la prod ».
 // Votre mission : la REVUE de cette PR, avec l'aide de l'IA (voir README).
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
-
-const SECRET_KEY = 's3cr3t-prod-2026';
 
 /** Empreinte lente et salée : `sel:hash` en hexadécimal. */
 function hacher(motDePasse: string, sel = randomBytes(16)): string {
@@ -25,8 +23,12 @@ create table if not exists notes (id integer primary key, owner integer, contenu
 
 export class NotesService {
   bd: DatabaseSync;
+  #cle: string;
 
   constructor(cheminBd = ':memory:') {
+    const cle = process.env.NOTES_SECRET;
+    if (!cle) throw new Error('NOTES_SECRET doit être défini dans l\'environnement');
+    this.#cle = cle;
     this.bd = new DatabaseSync(cheminBd);
     this.bd.exec(SCHEMA);
   }
@@ -54,6 +56,6 @@ export class NotesService {
   }
 
   jeton(userId: number): string {
-    return createHash('sha256').update(`${userId}:${SECRET_KEY}`).digest('hex');
+    return createHmac('sha256', this.#cle).update(String(userId)).digest('hex');
   }
 }
