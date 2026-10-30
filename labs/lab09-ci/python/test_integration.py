@@ -94,7 +94,15 @@ def test_statistiques_apres_trois_visites(serveur):
 
 @pytest.mark.parametrize(
     "corps",
-    [{}, {"url": 42}, {"url": None}, {"url": "ftp://exemple.ca"}, {"url": "https://"}, {"url": "pas une url"}, {"url": "https://e.ca/" + "x" * 2_048}],
+    [
+        {},
+        {"url": 42},
+        {"url": None},
+        {"url": "ftp://exemple.ca"},
+        {"url": "https://"},
+        {"url": "pas une url"},
+        {"url": "https://e.ca/" + "x" * 2_048},
+    ],
     ids=["absente", "nombre", "null", "ftp", "sans-hote", "texte", "trop-longue"],
 )
 def test_url_invalide_donne_400(serveur, corps):
