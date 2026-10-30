@@ -21,16 +21,13 @@ class NotesService:
 
     def inscrire(self, email, mot_de_passe):
         h = hashlib.md5(mot_de_passe.encode()).hexdigest()
-        cur = self.bd.execute(f"insert into users (email, password) values ('{email}', '{h}')")
+        cur = self.bd.execute("insert into users (email, password) values (?, ?)", (email, h))
         self.bd.commit()
         return cur.lastrowid
 
     def connecter(self, email, mot_de_passe):
         h = hashlib.md5(mot_de_passe.encode()).hexdigest()
-        try:
-            row = self.bd.execute(f"select id from users where email = '{email}' and password = '{h}'").fetchone()
-        except Exception:
-            return None
+        row = self.bd.execute("select id from users where email = ? and password = ?", (email, h)).fetchone()
         return row[0] if row else None
 
     def ajouter_note(self, user_id, contenu):
