@@ -20,18 +20,14 @@ export class NotesService {
 
   inscrire(email: string, motDePasse: string): number {
     const h = createHash('md5').update(motDePasse).digest('hex');
-    const r = this.bd.prepare(`insert into users (email, password) values ('${email}', '${h}')`).run();
+    const r = this.bd.prepare('insert into users (email, password) values (?, ?)').run(email, h);
     return Number(r.lastInsertRowid);
   }
 
   connecter(email: string, motDePasse: string): number | null {
     const h = createHash('md5').update(motDePasse).digest('hex');
-    try {
-      const row = this.bd.prepare(`select id from users where email = '${email}' and password = '${h}'`).get() as any;
-      return row ? row.id : null;
-    } catch {
-      return null;
-    }
+    const row = this.bd.prepare('select id from users where email = ? and password = ?').get(email, h) as any;
+    return row ? row.id : null;
   }
 
   ajouterNote(userId: number, contenu: string): number {
