@@ -49,7 +49,7 @@ export class NotesService {
   }
 
   lireNote(userId: number, noteId: number): string | null {
-    const row = this.bd.prepare('select contenu from notes where id = ?').get(noteId) as any;
+    const row = this.bd.prepare('select contenu from notes where id = ? and owner = ?').get(noteId, userId) as any;
     return row ? row.contenu : null;
   }
 
