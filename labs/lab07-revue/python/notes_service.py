@@ -8,8 +8,6 @@ import hmac
 import os
 import sqlite3
 
-SECRET_KEY = "s3cr3t-prod-2026"
-
 ITERATIONS_PBKDF2 = 600_000
 
 SCHEMA = """
@@ -51,6 +49,10 @@ def verifier(mot_de_passe: str, stocke: str) -> bool:
 
 class NotesService:
     def __init__(self, chemin_bd: str = ":memory:"):
+        cle = os.environ.get("NOTES_SECRET")
+        if not cle:
+            raise RuntimeError("NOTES_SECRET doit être défini dans l'environnement")
+        self._cle = cle.encode()
         self.bd = sqlite3.connect(chemin_bd)
         self.bd.executescript(SCHEMA)
 
@@ -75,4 +77,4 @@ class NotesService:
         return row[0] if row else None
 
     def jeton(self, user_id):
-        return hashlib.sha256(f"{user_id}:{SECRET_KEY}".encode()).hexdigest()
+        return hmac.new(self._cle, str(user_id).encode(), hashlib.sha256).hexdigest()
